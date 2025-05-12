@@ -3,26 +3,26 @@ package by.bsuir.films_gui;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.HttpEntity;
 import org.apache.http.StatusLine;
-import org.apache.http.client.methods.*;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpDelete;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.MockitoAnnotations;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
-public class MovieServiceTest {
-
+class MovieServiceTest {
     @Mock
     private CloseableHttpClient httpClient;
 
@@ -36,106 +36,124 @@ public class MovieServiceTest {
     private StatusLine statusLine;
 
     private MovieService movieService;
-    private ObjectMapper objectMapper;
+    private ObjectMapper mapper;
 
     @BeforeEach
     void setUp() {
-        movieService = new MovieService();
-        objectMapper = new ObjectMapper();
-        // Заменяем реальный HTTP-клиент моканным
-        movieService = new MovieService() {
-            @Override
-            public List<Movie> getAllMovies() throws IOException {
-                when(httpClient.execute(any(HttpGet.class))).thenReturn(httpResponse);
-                when(httpResponse.getEntity()).thenReturn(httpEntity);
-                return super.getAllMovies();
-            }
-
-            @Override
-            public Movie addMovie(Movie movie) throws IOException {
-                when(httpClient.execute(any(HttpPost.class))).thenReturn(httpResponse);
-                when(httpResponse.getEntity()).thenReturn(httpEntity);
-                return super.addMovie(movie);
-            }
-
-            @Override
-            public Movie updateMovie(int id, Movie movie) throws IOException {
-                when(httpClient.execute(any(HttpPut.class))).thenReturn(httpResponse);
-                when(httpResponse.getEntity()).thenReturn(httpEntity);
-                return super.updateMovie(id, movie);
-            }
-
-            @Override
-            public void deleteMovie(int id) throws IOException {
-                when(httpClient.execute(any(HttpDelete.class))).thenReturn(httpResponse);
-                super.deleteMovie(id);
-            }
-        };
+        MockitoAnnotations.openMocks(this);
+        movieService = new MovieService(httpClient);
+        mapper = new ObjectMapper();
     }
 
     @Test
     void testGetAllMovies() throws IOException {
-        // Arrange
+        // Prepare test data
         Movie[] movies = {
                 new Movie(1, "Интерстеллар", "Фантастический фильм", "фантастика", 2014),
-                new Movie(2, "Побег из Шоушенка", "Драма", "драма", 1994)
+                new Movie(2, "Побег из Шоушенка", "Драма о надежде", "драма", 1994)
         };
-        String jsonResponse = objectMapper.writeValueAsString(movies);
-        when(httpEntity.getContent()).thenReturn(new java.io.ByteArrayInputStream(jsonResponse.getBytes()));
-        when(EntityUtils.toString(httpEntity)).thenReturn(jsonResponse);
+        String jsonResponse = mapper.writeValueAsString(movies);
 
-        // Act
+        // Mock the HTTP GET request
+        HttpGet httpGet = new HttpGet("http://localhost:8080/api/movies");
+        when(httpClient.execute(any(HttpGet.class))).thenReturn(httpResponse);
+        when(httpResponse.getEntity()).thenReturn(httpEntity);
+        when(httpEntity.getContent()).thenReturn(new ByteArrayInputStream(jsonResponse.getBytes(StandardCharsets.UTF_8)));
+
+        // Execute the method
         List<Movie> result = movieService.getAllMovies();
 
-        // Assert
+        // Verify
         assertNotNull(result);
         assertEquals(2, result.size());
         assertEquals("Интерстеллар", result.get(0).getTitle());
         assertEquals("Побег из Шоушенка", result.get(1).getTitle());
-        verify(httpClient, times(1)).execute(any(HttpGet.class));
+        verify(httpClient).execute(any(HttpGet.class));
     }
 
     @Test
     void testAddMovie() throws IOException {
-        // Arrange
-        Movie movie = new Movie(3, "Остров проклятых", "Триллер", "триллер", 2009);
-        String jsonResponse = objectMapper.writeValueAsString(movie);
-        when(httpEntity.getContent()).thenReturn(new java.io.ByteArrayInputStream(jsonResponse.getBytes()));
-        when(EntityUtils.toString(httpEntity)).thenReturn(jsonResponse);
+        // Prepare test data
+        Movie movieToAdd = new Movie(0, "Остров проклятых", "Триллер о тайнах", "триллер", 2010);
+        Movie expectedMovie = new Movie(3, "Остров проклятых", "Триллер о тайнах", "триллер", 2010);
+        String jsonResponse = mapper.writeValueAsString(expectedMovie);
+        System.out.println("JSON Response: " + jsonResponse); // Отладка
 
-        // Act
-        Movie result = movieService.addMovie(movie);
+        // Mock the HTTP POST request
+        HttpPost httpPost = new HttpPost("http://localhost:8080/api/movies");
+        when(httpClient.execute(any(HttpPost.class))).thenReturn(httpResponse);
+        when(httpResponse.getEntity()).thenReturn(httpEntity);
+        when(httpEntity.getContent()).thenReturn(new ByteArrayInputStream(jsonResponse.getBytes(StandardCharsets.UTF_8)));
 
-        // Assert
+        // Execute the method
+        Movie result = movieService.addMovie(movieToAdd);
+        System.out.println("Result Title: " + result.getTitle()); // Отладка
+
+        // Verify
         assertNotNull(result);
+        assertEquals(3, result.getMovieId());
         assertEquals("Остров проклятых", result.getTitle());
-        assertEquals("триллер", result.getGenre());
-        verify(httpClient, times(1)).execute(any(HttpPost.class));
+        verify(httpClient).execute(any(HttpPost.class));
     }
 
     @Test
     void testUpdateMovie() throws IOException {
-        // Arrange
-        Movie movie = new Movie(1, "Интерстеллар Обновленный", "Обновленный фильм", "фантастика", 2014);
-        String jsonResponse = objectMapper.writeValueAsString(movie);
-        when(httpEntity.getContent()).thenReturn(new java.io.ByteArrayInputStream(jsonResponse.getBytes()));
-        when(EntityUtils.toString(httpEntity)).thenReturn(jsonResponse);
+        // Prepare test data
+        int movieId = 1;
+        Movie movieToUpdate = new Movie(1, "Интерстеллар Обновленный", "Обновленный фантастический фильм", "фантастика", 2014);
+        String jsonRequest = mapper.writeValueAsString(movieToUpdate);
+        String jsonResponse = mapper.writeValueAsString(movieToUpdate);
 
-        // Act
-        Movie result = movieService.updateMovie(1, movie);
+        // Mock the HTTP PUT request
+        HttpPut httpPut = new HttpPut("http://localhost:8080/api/movies/" + movieId);
+        when(httpClient.execute(any(HttpPut.class))).thenReturn(httpResponse);
+        when(httpResponse.getEntity()).thenReturn(httpEntity);
+        when(httpEntity.getContent()).thenReturn(new ByteArrayInputStream(jsonResponse.getBytes(StandardCharsets.UTF_8)));
 
-        // Assert
+        // Execute the method
+        Movie result = movieService.updateMovie(movieId, movieToUpdate);
+
+        // Verify
         assertNotNull(result);
         assertEquals("Интерстеллар Обновленный", result.getTitle());
-        verify(httpClient, times(1)).execute(any(HttpPut.class));
+        assertEquals("фантастика", result.getGenre());
+        verify(httpClient).execute(any(HttpPut.class));
     }
 
     @Test
     void testDeleteMovie() throws IOException {
-        // Act
-        movieService.deleteMovie(1);
+        // Prepare test data
+        int movieId = 1;
 
-        // Assert
-        verify(httpClient, times(1)).execute(any(HttpDelete.class));
+        // Mock the HTTP DELETE request
+        HttpDelete httpDelete = new HttpDelete("http://localhost:8080/api/movies/" + movieId);
+        when(httpClient.execute(any(HttpDelete.class))).thenReturn(httpResponse);
+
+        // Execute the method
+        assertDoesNotThrow(() -> movieService.deleteMovie(movieId));
+
+        // Verify
+        verify(httpClient).execute(any(HttpDelete.class));
     }
+
+    @Test
+    void testGetAllMovies_EmptyList() throws IOException {
+        // Prepare test data
+        Movie[] movies = {};
+        String jsonResponse = mapper.writeValueAsString(movies);
+
+        // Mock the HTTP GET request
+        HttpGet httpGet = new HttpGet("http://localhost:8080/api/movies");
+        when(httpClient.execute(any(HttpGet.class))).thenReturn(httpResponse);
+        when(httpResponse.getEntity()).thenReturn(httpEntity);
+        when(httpEntity.getContent()).thenReturn(new ByteArrayInputStream(jsonResponse.getBytes(StandardCharsets.UTF_8)));
+
+        // Execute the method
+        List<Movie> result = movieService.getAllMovies();
+
+        // Verify
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
 }

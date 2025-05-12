@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane prefHeight="600" prefWidth="800" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="by.bsuir.films_gui.MovieController">
+    <padding>
+        <Insets bottom="10" left="10" right="10" top="10" />
+    </padding>
+
+    <!-- Таблица в центре -->
+    <center>
+        <TableView fx:id="movieTable" BorderPane.alignment="CENTER">
+            <columns>
+                <TableColumn fx:id="idColumn" prefWidth="50" text="ID" />
+                <TableColumn fx:id="titleColumn" prefWidth="140.0" text="Название" />
+                <TableColumn fx:id="descriptionColumn" prefWidth="268.0" text="Описание" />
+                <TableColumn fx:id="genreColumn" prefWidth="192.0" text="Жанр" />
+                <TableColumn fx:id="yearColumn" prefWidth="100" text="Год" />
+            </columns>
+            <!-- Растягиваем таблицу -->
+            <BorderPane.margin>
+                <Insets bottom="0" left="0" right="10" top="0" />
+            </BorderPane.margin>
+        </TableView>
+    </center>
+
+    <!-- Кнопки справа -->
+    <right>
+        <VBox alignment="TOP_CENTER" prefHeight="580.0" prefWidth="140.0" spacing="10" BorderPane.alignment="TOP_CENTER">
+            <Button fx:id="addButton" onAction="#handleAddMovie" prefHeight="24.0" prefWidth="130.0" text="Добавить" />
+            <Button fx:id="editButton" onAction="#handleEditMovie" prefHeight="24.0" prefWidth="130.0" text="Редактировать" />
+            <Button fx:id="deleteButton" onAction="#handleDeleteMovie" prefHeight="24.0" prefWidth="130.0" text="Удалить" />
+            <VBox.margin>
+                <Insets bottom="0" left="10" right="0" top="0" />
+            </VBox.margin>
+        </VBox>
+    </right>
+</BorderPane>
